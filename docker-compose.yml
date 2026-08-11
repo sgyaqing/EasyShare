@@ -1,0 +1,24 @@
+services:
+  easyshare:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: easyshare:latest
+    container_name: easyshare
+    # Host networking: the container sees real client IPs (needed for the
+    # hostname+IP identity) and LAN multicast/broadcast (mDNS/NetBIOS
+    # discovery). Docker Desktop users must enable "host networking" in
+    # Settings -> Resources -> Network first.
+    network_mode: host
+    # Advertised IP/hostname for the page title and local identity. Needed on
+    # Docker Desktop, where the container only sees the VM (docker-desktop /
+    # 192.168.65.x). Usage: HOST_IP=192.168.x.x HOST_NAME=myhost docker compose up -d
+    environment:
+      - EASY_SHARE_HOST_IP=${HOST_IP:-}
+      - EASY_SHARE_HOSTNAME=${HOST_NAME:-}
+    volumes:
+      - ./easyshare-files:/easyshare-files
+    restart: unless-stopped
+    # Bridge mode alternative (published port, but client IPs are NATed):
+    # ports:
+    #   - "8972:8972"

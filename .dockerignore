@@ -1,0 +1,7 @@
+target
+cargo-registry
+easyshare-files
+easyshare-linux-*
+*.log
+.git
+.claude

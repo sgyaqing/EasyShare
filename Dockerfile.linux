@@ -1,0 +1,4 @@
+FROM rust:alpine
+# musl-dev + cc are needed to compile the bundled SQLite C source.
+RUN apk add --no-cache musl-dev gcc
+WORKDIR /src

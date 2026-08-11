@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasyShare - __SERVER_IP__</title>
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="alternate icon" type="image/png" sizes="32x32" href="/icon-32.png">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #262626; display: flex; align-items: center; justify-content: center;
+  }
+  #chat-window {
+    width: 100%; max-width: 640px; height: 88vh;
+    display: flex; flex-direction: column; background: #f5f5f5;
+    border-radius: 10px; overflow: hidden;
+    box-shadow: 0 0 24px rgba(0,0,0,.5);
+  }
+  #header {
+    background: #fff; color: #000; padding: 15px 18px;
+    font-size: 17px; border-bottom: 1px solid #e7e7e7; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    position: relative;
+  }
+  #lang-btn {
+    background: none; border: none; cursor: pointer; padding: 4px;
+    display: flex; align-items: center;
+  }
+  #lang-btn svg { width: 20px; height: 20px; stroke: #666; fill: none; }
+  #lang-btn:hover svg { stroke: #000; }
+  #lang-menu {
+    position: absolute; top: 46px; right: 10px; z-index: 1000;
+    background: #fff; border-radius: 6px; padding: 4px 0; display: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,.2); min-width: 110px;
+  }
+  #lang-menu .item { padding: 8px 18px; font-size: 14px; cursor: pointer; }
+  #lang-menu .item:hover { background: #f0f0f0; }
+  #lang-menu .item.active { font-weight: bold; }
+  #messages { flex: 1; overflow-y: auto; padding: 6px 18px 12px; }
+  #messages::-webkit-scrollbar { width: 6px; }
+  #messages::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+  #load-more {
+    text-align: center; color: #999; font-size: 12px; padding: 8px 0;
+    cursor: pointer; display: none;
+  }
+  .recalled-text { font-size: 13px; color: #999; font-style: italic; padding: 6px 2px; }
+  .msg-row { display: flex; margin: 16px 0; align-items: flex-start; }
+  .msg-row.own { flex-direction: row-reverse; }
+  .avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; }
+  .msg-body { max-width: 70%; margin-left: 12px; }
+  .msg-row.own .msg-body {
+    margin-left: 0; margin-right: 12px;
+    display: flex; flex-direction: column; align-items: flex-end;
+  }
+  .meta { font-size: 12px; color: #999; margin-bottom: 3px; }
+  .bubble {
+    padding: 10px 14px; border-radius: 5px; font-size: 15px; line-height: 1.55;
+    background: #fff; border: 1px solid #e3e3e3;
+    white-space: pre-wrap; word-break: break-word; text-align: left;
+  }
+  .msg-row.own .bubble { background: #95ec69; border-color: #95ec69; }
+  img.thumb {
+    max-width: 200px; max-height: 200px; border-radius: 5px;
+    display: block; cursor: zoom-in;
+  }
+  .file-card {
+    background: #fff; border: 1px solid #e0e0e0; border-radius: 6px;
+    padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; min-width: 220px; max-width: 280px;
+  }
+  .file-info { flex: 1; min-width: 0; }
+  .file-name {
+    font-size: 14px; color: #222; word-break: break-all;
+    overflow: hidden; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .file-size { font-size: 12px; color: #999; margin-top: 4px; }
+  .file-icon {
+    width: 42px; height: 42px; border-radius: 5px; color: #fff;
+    font-size: 11px; font-weight: bold; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #input-panel {
+    background: #fff; border-top: 1px solid #e7e7e7;
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  #toolbar { padding: 8px 14px 0; }
+  #file-btn {
+    background: none; border: none; cursor: pointer; padding: 4px;
+    display: flex; align-items: center;
+  }
+  #file-btn svg { width: 22px; height: 22px; stroke: #888; fill: none; }
+  #file-btn:hover svg { stroke: #333; }
+  #file-input { display: none; }
+  #input {
+    border: none; outline: none; resize: none; width: 100%;
+    min-height: 72px; max-height: 160px; padding: 8px 14px;
+    font-size: 15px; font-family: inherit; background: transparent;
+  }
+  #input::placeholder { color: #c4c4c4; }
+  #send-row { display: flex; justify-content: flex-end; padding: 0 14px 12px; }
+  #send-btn {
+    background: #07c160; color: #fff; border: none; border-radius: 5px;
+    padding: 7px 24px; font-size: 14px; cursor: pointer;
+  }
+  #send-btn:disabled { background: #a9a9a9; cursor: default; }
+  #ctx-menu {
+    position: fixed; z-index: 1000; background: #fff; border-radius: 6px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.2); padding: 4px 0; display: none;
+    min-width: 110px;
+  }
+  #ctx-menu .item { padding: 8px 18px; font-size: 14px; cursor: pointer; }
+  #ctx-menu .item:hover { background: #f0f0f0; }
+  #lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 900;
+    display: none; align-items: center; justify-content: center; cursor: zoom-out;
+  }
+  #lightbox img { max-width: 92%; max-height: 92%; }
+  #toast {
+    position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,.7); color: #fff; padding: 8px 18px;
+    border-radius: 6px; font-size: 13px; display: none; z-index: 1100;
+  }
+  #drop-overlay {
+    position: fixed; inset: 0; background: rgba(91,155,213,.25); z-index: 800;
+    display: none; align-items: center; justify-content: center;
+    font-size: 20px; color: #2b2b2b; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="chat-window">
+  <div id="header">
+    <span>EasyShare - __SERVER_IP__</span>
+    <button id="lang-btn" title="">
+      <svg viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M3 12h18"/>
+        <path d="M12 3c2.5 2.6 3.9 5.7 3.9 9s-1.4 6.4-3.9 9c-2.5-2.6-3.9-5.7-3.9-9S9.5 5.6 12 3z"/>
+      </svg>
+    </button>
+    <div id="lang-menu">
+      <div class="item" data-lang="zh">中文</div>
+      <div class="item" data-lang="en">English</div>
+    </div>
+  </div>
+  <div id="messages">
+    <div id="load-more"></div>
+    <div id="msg-list"></div>
+  </div>
+  <div id="input-panel">
+    <div id="toolbar">
+      <button id="file-btn" title="">
+        <svg viewBox="0 0 24 24" stroke-width="1.5" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+      </button>
+      <input type="file" id="file-input" multiple>
+    </div>
+    <textarea id="input" rows="3"></textarea>
+    <div id="send-row">
+      <button id="send-btn"></button>
+    </div>
+  </div>
+</div>
+<div id="ctx-menu"></div>
+<div id="lightbox"><img alt=""></div>
+<div id="toast"></div>
+<div id="drop-overlay"></div>
+
+<script>window.SERVER_IP = "__SERVER_IP__";</script>
+<script>window.LANG = "__LANG__"; window.I18N_ALL = __I18N_ALL_JSON__;</script>
+<script>
+(function () {
+  "use strict";
+  // Language: server-detected default, overridable via localStorage.
+  var lang = window.LANG;
+  try {
+    var saved = localStorage.getItem("easyshare.lang");
+    if (saved && window.I18N_ALL[saved]) lang = saved;
+  } catch (e) {}
+  var T = window.I18N_ALL[lang] || window.I18N_ALL.en;
+  var me = null;               // {hostname, ip, display, avatar_url}
+  var oldestId = null;
+  var hasMore = false;
+  var noMoreShown = false;
+  var loading = false;
+  var knownIds = {};
+
+  var msgList = document.getElementById("msg-list");
+  var messagesEl = document.getElementById("messages");
+  var loadMoreEl = document.getElementById("load-more");
+  var inputEl = document.getElementById("input");
+  var sendBtn = document.getElementById("send-btn");
+  var fileBtn = document.getElementById("file-btn");
+  var fileInput = document.getElementById("file-input");
+  var ctxMenu = document.getElementById("ctx-menu");
+  var lightbox = document.getElementById("lightbox");
+  var toastEl = document.getElementById("toast");
+  var dropOverlay = document.getElementById("drop-overlay");
+  var inputPanel = document.getElementById("input-panel");
+
+  sendBtn.textContent = T.send;
+  inputEl.placeholder = T.input_placeholder;
+  dropOverlay.textContent = T.drop_hint;
+
+  function t(key) { return T[key] || key; }
+
+  // Language switching.
+  var langBtn = document.getElementById("lang-btn");
+  var langMenu = document.getElementById("lang-menu");
+
+  function hideLangMenu() { langMenu.style.display = "none"; }
+
+  function markActiveLang() {
+    var items = langMenu.querySelectorAll(".item");
+    for (var i = 0; i < items.length; i++) {
+      items[i].className = "item" + (items[i].dataset.lang === lang ? " active" : "");
+    }
+  }
+
+  function applyLang(newLang) {
+    lang = newLang;
+    T = window.I18N_ALL[lang] || window.I18N_ALL.en;
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+    sendBtn.textContent = t("send");
+    inputEl.placeholder = t("input_placeholder");
+    dropOverlay.textContent = t("drop_hint");
+    if (noMoreShown) loadMoreEl.textContent = t("no_more");
+    var notes = msgList.querySelectorAll(".recalled-text");
+    for (var i = 0; i < notes.length; i++) {
+      notes[i].textContent = t("recalled");
+    }
+    markActiveLang();
+    try { localStorage.setItem("easyshare.lang", lang); } catch (e) {}
+  }
+
+  langBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    markActiveLang();
+    langMenu.style.display = langMenu.style.display === "block" ? "none" : "block";
+  });
+  langMenu.addEventListener("click", function (e) {
+    e.stopPropagation();
+    var item = e.target.closest ? e.target.closest(".item") : null;
+    if (item && item.dataset.lang) {
+      applyLang(item.dataset.lang);
+      hideLangMenu();
+    }
+  });
+  document.addEventListener("click", hideLangMenu);
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+
+  var toastTimer = null;
+  function toast(text) {
+    toastEl.textContent = text;
+    toastEl.style.display = "block";
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.style.display = "none"; }, 1800);
+  }
+
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function fmtTime(epochSec) {
+    var d = new Date(epochSec * 1000);
+    var hm = pad(d.getHours()) + ":" + pad(d.getMinutes());
+    if (d.toDateString() === new Date().toDateString()) return hm;
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + hm;
+  }
+
+  function fmtSize(bytes) {
+    if (bytes == null) return "";
+    if (bytes < 1024) return bytes + "B";
+    if (bytes < 1048576) return (bytes / 1024).toFixed(2) + "KB";
+    if (bytes < 1073741824) return (bytes / 1048576).toFixed(2) + "MB";
+    return (bytes / 1073741824).toFixed(2) + "GB";
+  }
+
+  var EXT_COLORS = {
+    doc: "#2b579a", docx: "#2b579a",
+    xls: "#217346", xlsx: "#217346",
+    ppt: "#d24726", pptx: "#d24726",
+    pdf: "#e2574c",
+    zip: "#8e6cab", rar: "#8e6cab", "7z": "#8e6cab",
+    txt: "#5b9bd5", md: "#5b9bd5", log: "#5b9bd5"
+  };
+
+  function fileExt(name) {
+    if (!name || name.indexOf(".") < 0) return "";
+    return name.split(".").pop().toLowerCase();
+  }
+
+  function isOwn(m) {
+    return me && m.hostname === me.hostname && m.ip === me.ip;
+  }
+
+  function hideCtxMenu() { ctxMenu.style.display = "none"; }
+  document.addEventListener("click", hideCtxMenu);
+  document.addEventListener("scroll", hideCtxMenu, true);
+
+  function showCtxMenu(x, y, items) {
+    ctxMenu.innerHTML = "";
+    items.forEach(function (it) {
+      var div = document.createElement("div");
+      div.className = "item";
+      div.textContent = it.label;
+      div.addEventListener("click", function (e) {
+        e.stopPropagation();
+        hideCtxMenu();
+        it.action();
+      });
+      ctxMenu.appendChild(div);
+    });
+    ctxMenu.style.display = "block";
+    var mw = ctxMenu.offsetWidth, mh = ctxMenu.offsetHeight;
+    ctxMenu.style.left = Math.min(x, window.innerWidth - mw - 4) + "px";
+    ctxMenu.style.top = Math.min(y, window.innerHeight - mh - 4) + "px";
+  }
+
+  function copyText(text) {
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); toast(t("copy_done")); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast(t("copy_done"));
+      }, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  function downloadFile(url, name) {
+    var a = document.createElement("a");
+    a.href = url;
+    if (name) a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function recallMessage(id) {
+    fetch("/api/messages/" + id + "/recall", { method: "POST" }).then(function (resp) {
+      if (!resp.ok) toast(t("recall_failed"));
+    }, function () { toast(t("recall_failed")); });
+  }
+
+  function buildContent(m) {
+    if (m.kind === "text") {
+      var bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = m.content || "";
+      return bubble;
+    }
+    if (m.kind === "image") {
+      var img = document.createElement("img");
+      img.className = "thumb";
+      img.src = m.file_url;
+      img.alt = m.orig_name || "";
+      img.addEventListener("click", function () {
+        lightbox.querySelector("img").src = m.file_url;
+        lightbox.style.display = "flex";
+      });
+      return img;
+    }
+    var card = document.createElement("div");
+    card.className = "file-card";
+    var info = document.createElement("div");
+    info.className = "file-info";
+    var name = document.createElement("div");
+    name.className = "file-name";
+    name.textContent = m.orig_name || m.file_url;
+    var size = document.createElement("div");
+    size.className = "file-size";
+    size.textContent = fmtSize(m.size);
+    info.appendChild(name);
+    info.appendChild(size);
+    var icon = document.createElement("div");
+    icon.className = "file-icon";
+    var ext = fileExt(m.orig_name);
+    icon.textContent = (ext || "file").toUpperCase().slice(0, 4);
+    icon.style.background = EXT_COLORS[ext] || "#909399";
+    card.appendChild(info);
+    card.appendChild(icon);
+    card.addEventListener("click", function () {
+      downloadFile(m.file_url, m.orig_name);
+    });
+    return card;
+  }
+
+  function buildRow(m) {
+    var row = document.createElement("div");
+    row.className = "msg-row" + (isOwn(m) ? " own" : "");
+    row.dataset.id = m.id;
+    row.dataset.ts = m.created_at;
+    row.dataset.sender = m.sender;
+    if (m.recalled) row.dataset.recalled = "1";
+
+    var avatar = document.createElement("img");
+    avatar.className = "avatar";
+    avatar.src = m.avatar_url;
+    avatar.alt = "";
+    row.appendChild(avatar);
+
+    var body = document.createElement("div");
+    body.className = "msg-body";
+
+    var meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = m.sender + "  " + fmtTime(m.created_at);
+    body.appendChild(meta);
+
+    if (m.recalled) {
+      var note = document.createElement("div");
+      note.className = "recalled-text";
+      note.textContent = t("recalled");
+      body.appendChild(note);
+    } else {
+      body.appendChild(buildContent(m));
+    }
+    row.appendChild(body);
+
+    row.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+      if (row.dataset.recalled === "1") return;
+      var items = [];
+      if (m.kind === "text") {
+        items.push({ label: t("copy"), action: function () { copyText(m.content || ""); } });
+      } else {
+        items.push({ label: t("download"), action: function () { downloadFile(m.file_url, m.orig_name); } });
+      }
+      if (isOwn(m)) {
+        items.push({ label: t("recall"), action: function () { recallMessage(m.id); } });
+      }
+      if (items.length) showCtxMenu(e.clientX, e.clientY, items);
+    });
+
+    return row;
+  }
+
+  function appendMessage(m) {
+    if (knownIds[m.id]) return;
+    knownIds[m.id] = true;
+    msgList.appendChild(buildRow(m));
+  }
+
+  function prependBatch(messages) {
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < messages.length; i++) {
+      var m = messages[i];
+      if (knownIds[m.id]) continue;
+      knownIds[m.id] = true;
+      frag.appendChild(buildRow(m));
+    }
+    msgList.insertBefore(frag, msgList.firstChild);
+  }
+
+  function markRecalled(id) {
+    var row = msgList.querySelector('.msg-row[data-id="' + id + '"]');
+    if (!row || row.dataset.recalled === "1") return;
+    row.dataset.recalled = "1";
+    var body = row.querySelector(".msg-body");
+    var content = body.querySelector(".bubble, img.thumb, .file-card");
+    if (content) body.removeChild(content);
+    var note = document.createElement("div");
+    note.className = "recalled-text";
+    note.textContent = t("recalled");
+    body.appendChild(note);
+  }
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function nearBottom() {
+    return messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 60;
+  }
+
+  function updateLoadMore() {
+    loadMoreEl.style.display = hasMore ? "block" : "none";
+    loadMoreEl.textContent = hasMore ? "..." : "";
+  }
+
+  function fetchMessages(before, cb) {
+    if (loading) return;
+    loading = true;
+    var url = "/api/messages?limit=10" + (before ? "&before=" + before : "");
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      loading = false;
+      cb(data);
+    }, function () { loading = false; });
+  }
+
+  function loadInitial() {
+    fetchMessages(null, function (data) {
+      data.messages.forEach(appendMessage);
+      if (data.messages.length) oldestId = data.messages[0].id;
+      hasMore = data.has_more;
+      updateLoadMore();
+      scrollToBottom();
+    });
+  }
+
+  function loadOlder() {
+    if (!hasMore || loading || oldestId == null) return;
+    var prevHeight = messagesEl.scrollHeight;
+    var prevTop = messagesEl.scrollTop;
+    fetchMessages(oldestId, function (data) {
+      prependBatch(data.messages);
+      if (data.messages.length) oldestId = data.messages[0].id;
+      hasMore = data.has_more;
+      updateLoadMore();
+      // Keep viewport anchored on the previously visible message.
+      messagesEl.scrollTop = prevTop + (messagesEl.scrollHeight - prevHeight);
+      if (!hasMore && data.messages.length === 0) {
+        noMoreShown = true;
+        loadMoreEl.style.display = "block";
+        loadMoreEl.textContent = t("no_more");
+      }
+    });
+  }
+
+  loadMoreEl.addEventListener("click", loadOlder);
+  messagesEl.addEventListener("scroll", function () {
+    if (messagesEl.scrollTop < 40) loadOlder();
+  });
+
+  function sendText() {
+    var text = inputEl.value.trim();
+    if (!text) { toast(t("empty_message")); return; }
+    sendBtn.disabled = true;
+    fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: text })
+    }).then(function (resp) {
+      sendBtn.disabled = false;
+      if (resp.ok) {
+        inputEl.value = "";
+      } else {
+        toast(t("send_failed"));
+      }
+    }, function () {
+      sendBtn.disabled = false;
+      toast(t("send_failed"));
+    });
+  }
+
+  function uploadFiles(files) {
+    if (!files || !files.length) return;
+    // The browser knows every file's size up front — reject oversized ones
+    // instantly instead of streaming them to the server for the same answer.
+    var MAX_SIZE = 1073741824; // 1 GiB — must match the server's MAX_BODY_SIZE
+    var queue = [];
+    var tooLarge = false;
+    for (var i = 0; i < files.length; i++) {
+      if (files[i].size > MAX_SIZE) tooLarge = true;
+      else queue.push(files[i]);
+    }
+    if (tooLarge) toast(t("file_too_large"));
+    if (!queue.length) return;
+    toast(t("uploading"));
+    var done = 0, failed = false;
+    function finish() {
+      if (done !== queue.length) return;
+      if (tooLarge) toast(t("file_too_large"));
+      else if (failed) toast(t("upload_failed"));
+      else toastEl.style.display = "none";
+    }
+    for (var j = 0; j < queue.length; j++) {
+      var fd = new FormData();
+      fd.append("file", queue[j]);
+      fetch("/api/upload", { method: "POST", body: fd }).then(function (resp) {
+        done++;
+        if (!resp.ok) {
+          failed = true;
+          if (resp.status === 413) tooLarge = true;
+        }
+        finish();
+      }, function () {
+        done++;
+        failed = true;
+        finish();
+      });
+    }
+  }
+
+  sendBtn.addEventListener("click", sendText);
+  inputEl.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendText();
+    }
+  });
+
+  fileBtn.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () {
+    uploadFiles(fileInput.files);
+    fileInput.value = "";
+  });
+
+  // Drag-and-drop onto the input area.
+  inputPanel.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    dropOverlay.style.display = "flex";
+  });
+  inputPanel.addEventListener("dragleave", function (e) {
+    if (e.target === inputPanel || !inputPanel.contains(e.relatedTarget)) {
+      dropOverlay.style.display = "none";
+    }
+  });
+  inputPanel.addEventListener("drop", function (e) {
+    e.preventDefault();
+    dropOverlay.style.display = "none";
+    if (e.dataTransfer && e.dataTransfer.files.length) {
+      uploadFiles(e.dataTransfer.files);
+    }
+  });
+
+  lightbox.addEventListener("click", function () {
+    lightbox.style.display = "none";
+  });
+
+  // Real-time updates.
+  function resyncLatest() {
+    // Refetch the newest page; anything missed while disconnected self-heals.
+    fetchMessages(null, function (data) {
+      data.messages.forEach(function (m) {
+        if (!knownIds[m.id]) appendMessage(m);
+        else if (m.recalled) markRecalled(m.id);
+      });
+      if (oldestId == null && data.messages.length) oldestId = data.messages[0].id;
+    });
+  }
+
+  function startEvents() {
+    var es = new EventSource("/api/events");
+    es.onopen = function () {
+      // Fires on connect AND on every reconnect — covers messages whose
+      // SSE broadcast happened while this client was disconnected.
+      resyncLatest();
+    };
+    es.onmessage = function (e) {
+      var data;
+      try { data = JSON.parse(e.data); } catch (err) { return; }
+      if (data.event === "new_message") {
+        var stick = nearBottom();
+        if (oldestId == null) oldestId = data.message.id;
+        appendMessage(data.message);
+        if (stick || isOwn(data.message)) scrollToBottom();
+      } else if (data.event === "recalled") {
+        markRecalled(data.id);
+      }
+    };
+    es.onerror = function () {
+      if (es.readyState === EventSource.CONNECTING) {
+        resyncLatest();
+      }
+    };
+  }
+
+  // Boot: identity first, then history, then live events.
+  fetch("/api/me").then(function (r) { return r.json(); }).then(function (data) {
+    me = data;
+    loadInitial();
+    startEvents();
+  });
+})();
+</script>
+</body>
+</html>

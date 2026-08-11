@@ -1,0 +1,12 @@
+/target
+DESIGN.md
+easyshare-files/
+.easyshare.pid
+.easyshare.out
+cargo-registry/
+easyshare-v*-*
+.env
+release/
+EasyShare.app/
+.DS_Store
+.claude/
